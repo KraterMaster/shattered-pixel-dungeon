@@ -33,26 +33,56 @@ import com.shatteredpixel.shatteredpixeldungeon.journal.Notes;
 import com.shatteredpixel.shatteredpixeldungeon.messages.Messages;
 import com.shatteredpixel.shatteredpixeldungeon.scenes.GameScene;
 import com.shatteredpixel.shatteredpixeldungeon.scenes.PixelScene;
+import com.shatteredpixel.shatteredpixeldungeon.sprites.ItemSprite;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Icons;
-import com.shatteredpixel.shatteredpixeldungeon.ui.RedButton;
 import com.shatteredpixel.shatteredpixeldungeon.ui.RenderedTextBlock;
-import com.shatteredpixel.shatteredpixeldungeon.ui.ScrollPane;
+import com.shatteredpixel.shatteredpixeldungeon.ui.ScrollingListPane;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Window;
-import com.watabou.noosa.ui.Component;
+import com.watabou.noosa.Image;
 import com.watabou.utils.Reflection;
+
+import java.util.ArrayList;
 
 //Debug menu: edit a few hero/dungeon values, and open the item menu.
 public class WndDebug extends Window {
 
-	private static final int WIDTH      = 120;
-	private static final int BTN_HEIGHT = 18;
-	private static final int GAP        = 2;
+	private static final int WIDTH = 120;
+
+	//matches the row height of ScrollingListPane
+	public static final int ROW_HEIGHT = 18;
 
 	//values are typed in with a text box, with at most this many digits
 	private static final int MAX_DIGITS = 9;
 
 	private interface ValueSetter {
 		void set( int value );
+	}
+
+	//A tappable row of a scrolling list. Scrolling panes pass taps on to their list items
+	//rather than to buttons placed inside them, so rows are used instead of buttons.
+	public static abstract class Row extends ScrollingListPane.ListItem {
+
+		private final boolean enabled;
+
+		public Row( Image icon, String text, boolean enabled ) {
+			super( icon, null, text );
+			this.enabled = enabled;
+			if (!enabled) {
+				hardlight( 0x999999 );
+				hardlightIcon( 0x999999 );
+			}
+		}
+
+		@Override
+		public boolean onClick( float x, float y ) {
+			if (enabled && inside( x, y )) {
+				onSelect();
+				return true;
+			}
+			return false;
+		}
+
+		protected abstract void onSelect();
 	}
 
 	public WndDebug() {
@@ -66,41 +96,43 @@ public class WndDebug extends Window {
 
 		float top = title.bottom() + 4;
 
-		Component content = new Component();
-		float pos = 0;
+		ArrayList<Row> rows = new ArrayList<>();
 
 		final Hero hero = Dungeon.hero;
 
 		//gold
-		pos = addValue( content, pos, Messages.get(this, "gold"), Dungeon.gold, true, new ValueSetter() {
-			@Override
-			public void set( int value ) {
-				Dungeon.gold = Math.max( 0, value );
-			}
-		});
+		rows.add( valueRow( Icons.get( Icons.COIN_SML ), Messages.get(this, "gold"), Dungeon.gold, true,
+				new ValueSetter() {
+					@Override
+					public void set( int value ) {
+						Dungeon.gold = Math.max( 0, value );
+					}
+				}));
 
 		//current HP
-		pos = addValue( content, pos, Messages.get(this, "hp"), hero.HP, true, new ValueSetter() {
-			@Override
-			public void set( int value ) {
-				//never set to 0, that would just kill the hero
-				hero.HP = Math.max( 1, Math.min( value, hero.HT ) );
-			}
-		});
+		rows.add( valueRow( Icons.get( Icons.STATS ), Messages.get(this, "hp"), hero.HP, true,
+				new ValueSetter() {
+					@Override
+					public void set( int value ) {
+						//never set to 0, that would just kill the hero
+						hero.HP = Math.max( 1, Math.min( value, hero.HT ) );
+					}
+				}));
 
 		//max HP, adjusted through the permanent HT boost so that it survives level ups
-		pos = addValue( content, pos, Messages.get(this, "max_hp"), hero.HT, true, new ValueSetter() {
-			@Override
-			public void set( int value ) {
-				hero.HTBoost += Math.max( 1, value ) - hero.HT;
-				hero.updateHT( false );
-			}
-		});
+		rows.add( valueRow( Icons.get( Icons.STATS ), Messages.get(this, "max_hp"), hero.HT, true,
+				new ValueSetter() {
+					@Override
+					public void set( int value ) {
+						hero.HTBoost += Math.max( 1, value ) - hero.HT;
+						hero.updateHT( false );
+					}
+				}));
 
 		//talent points, per tier
 		for (int t = 1; t <= Talent.MAX_TALENT_TIERS; t++) {
 			final int tier = t;
-			pos = addValue( content, pos,
+			rows.add( valueRow( Icons.get( Icons.TALENT ),
 					Messages.get(this, "talent", tier),
 					hero.talentPointsAvailable( tier ),
 					tierUnlocked( hero, tier ),
@@ -109,46 +141,43 @@ public class WndDebug extends Window {
 						public void set( int value ) {
 							hero.debugTalentPoints[tier] += Math.max( 0, value ) - hero.talentPointsAvailable( tier );
 						}
-					});
+					}));
 		}
 
 		//alchemy energy
-		pos = addValue( content, pos, Messages.get(this, "energy"), Dungeon.energy, true, new ValueSetter() {
-			@Override
-			public void set( int value ) {
-				Dungeon.energy = Math.max( 0, value );
-			}
-		});
+		rows.add( valueRow( Icons.get( Icons.ENERGY_SML ), Messages.get(this, "energy"), Dungeon.energy, true,
+				new ValueSetter() {
+					@Override
+					public void set( int value ) {
+						Dungeon.energy = Math.max( 0, value );
+					}
+				}));
 
 		//keys, for the current depth
-		pos = addKeyValue( content, pos, Messages.get(this, "iron_key"), IronKey.class );
-		pos = addKeyValue( content, pos, Messages.get(this, "golden_key"), GoldenKey.class );
-		pos = addKeyValue( content, pos, Messages.get(this, "crystal_key"), CrystalKey.class );
+		rows.add( keyRow( Messages.get(this, "iron_key"), IronKey.class ) );
+		rows.add( keyRow( Messages.get(this, "golden_key"), GoldenKey.class ) );
+		rows.add( keyRow( Messages.get(this, "crystal_key"), CrystalKey.class ) );
 
 		//items
-		pos += GAP * 2;
-		RedButton items = new RedButton( Messages.get(this, "items") ) {
+		rows.add( new Row( Icons.get( Icons.BACKPACK_LRG ), Messages.get(this, "items"), true ) {
 			@Override
-			protected void onClick() {
+			protected void onSelect() {
 				hide();
 				GameScene.show( new WndDebugItems() );
 			}
-		};
-		items.icon( Icons.get( Icons.BACKPACK ) );
-		items.setRect( 0, pos, WIDTH, BTN_HEIGHT );
-		content.add( items );
-		pos += BTN_HEIGHT;
-
-		content.setSize( WIDTH, pos );
+		});
 
 		int maxHeight = (int)(PixelScene.uiCamera.height * 0.9f) - (int)top;
-		int height = Math.min( (int)pos, maxHeight );
+		int height = Math.min( rows.size() * ROW_HEIGHT, maxHeight );
 
 		//the window must be resized before the scroll pane is positioned, as resizing moves the window's camera
 		resize( WIDTH, (int)top + height );
 
-		ScrollPane list = new ScrollPane( content );
+		ScrollingListPane list = new ScrollingListPane();
 		add( list );
+		for (Row row : rows) {
+			list.addItem( row );
+		}
 		list.setRect( 0, top, WIDTH, height );
 	}
 
@@ -159,13 +188,13 @@ public class WndDebug extends Window {
 				|| (tier == 4 && hero.armorAbility == null));
 	}
 
-	private float addKeyValue( Component content, float pos, String label, final Class<? extends Key> keyClass ) {
+	private Row keyRow( String label, final Class<? extends Key> keyClass ) {
 		final int depth = Dungeon.depth;
 
 		Key current = Reflection.newInstance( keyClass );
 		current.depth = depth;
 
-		return addValue( content, pos, label, Notes.keyCount( current ), true, new ValueSetter() {
+		return valueRow( new ItemSprite( current ), label, Notes.keyCount( current ), true, new ValueSetter() {
 			@Override
 			public void set( int value ) {
 				Key key = Reflection.newInstance( keyClass );
@@ -184,11 +213,11 @@ public class WndDebug extends Window {
 		});
 	}
 
-	private float addValue( Component content, float pos, final String label, final int value,
-	                        boolean enabled, final ValueSetter setter ) {
-		RedButton btn = new RedButton( label + ": " + value ) {
+	private Row valueRow( Image icon, final String label, final int value,
+	                      boolean enabled, final ValueSetter setter ) {
+		return new Row( icon, label + ": " + value, enabled ) {
 			@Override
-			protected void onClick() {
+			protected void onSelect() {
 				hide();
 				GameScene.show( new WndTextInput(
 						label,
@@ -213,9 +242,5 @@ public class WndDebug extends Window {
 				});
 			}
 		};
-		btn.enable( enabled );
-		btn.setRect( 0, pos, WIDTH, BTN_HEIGHT );
-		content.add( btn );
-		return pos + BTN_HEIGHT + GAP;
 	}
 }

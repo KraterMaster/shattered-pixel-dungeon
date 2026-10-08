@@ -41,13 +41,10 @@ import com.shatteredpixel.shatteredpixeldungeon.scenes.GameScene;
 import com.shatteredpixel.shatteredpixeldungeon.scenes.PixelScene;
 import com.shatteredpixel.shatteredpixeldungeon.sprites.ItemSprite;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Icons;
-import com.shatteredpixel.shatteredpixeldungeon.ui.RedButton;
 import com.shatteredpixel.shatteredpixeldungeon.ui.RenderedTextBlock;
-import com.shatteredpixel.shatteredpixeldungeon.ui.ScrollPane;
 import com.shatteredpixel.shatteredpixeldungeon.ui.ScrollingListPane;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Window;
 import com.shatteredpixel.shatteredpixeldungeon.utils.GLog;
-import com.watabou.noosa.ui.Component;
 import com.watabou.utils.Reflection;
 
 import java.util.ArrayList;
@@ -55,9 +52,7 @@ import java.util.ArrayList;
 //Debug item menu, first level: a list of item categories.
 public class WndDebugItems extends Window {
 
-	private static final int WIDTH      = 120;
-	private static final int BTN_HEIGHT = 18;
-	private static final int GAP        = 2;
+	private static final int WIDTH = 120;
 
 	public WndDebugItems() {
 		super();
@@ -70,32 +65,29 @@ public class WndDebugItems extends Window {
 
 		float top = title.bottom() + 4;
 
-		Component content = new Component();
-		float pos = 0;
-
-		for (final Catalog catalog : categories()) {
-			RedButton btn = new RedButton( Messages.titleCase( catalog.title() ) ) {
-				@Override
-				protected void onClick() {
-					hide();
-					GameScene.show( new Category( catalog ) );
-				}
-			};
-			btn.setRect( 0, pos, WIDTH, BTN_HEIGHT );
-			content.add( btn );
-			pos += BTN_HEIGHT + GAP;
-		}
-
-		content.setSize( WIDTH, pos - GAP );
+		ArrayList<Catalog> categories = categories();
 
 		int maxHeight = (int)(PixelScene.uiCamera.height * 0.9f) - (int)top;
-		int height = Math.min( (int)content.height(), maxHeight );
+		int height = Math.min( categories.size() * WndDebug.ROW_HEIGHT, maxHeight );
 
 		//the window must be resized before the scroll pane is positioned, as resizing moves the window's camera
 		resize( WIDTH, (int)top + height );
 
-		ScrollPane list = new ScrollPane( content );
+		ScrollingListPane list = new ScrollingListPane();
 		add( list );
+
+		//rows are used instead of buttons, as scrolling panes pass taps on to their list items only
+		for (final Catalog catalog : categories) {
+			list.addItem( new WndDebug.Row( Icons.get( Icons.CATALOG ),
+					Messages.titleCase( catalog.title() ), true ) {
+				@Override
+				protected void onSelect() {
+					hide();
+					GameScene.show( new Category( catalog ) );
+				}
+			});
+		}
+
 		list.setRect( 0, top, WIDTH, height );
 	}
 
