@@ -213,14 +213,15 @@ public class WndDebug extends Window {
 		});
 	}
 
-	private Row valueRow( Image icon, final String label, final int value,
+	//note that the name of the value can't be called "label" here, as rows already have a field with that name
+	private Row valueRow( Image icon, final String valueName, final int value,
 	                      boolean enabled, final ValueSetter setter ) {
-		return new Row( icon, label + ": " + value, enabled ) {
+		return new Row( icon, valueName + ": " + value, enabled ) {
 			@Override
 			protected void onSelect() {
 				hide();
 				GameScene.show( new WndTextInput(
-						label,
+						valueName,
 						Messages.get( WndDebug.class, "input_body" ),
 						Integer.toString( value ),
 						MAX_DIGITS,
