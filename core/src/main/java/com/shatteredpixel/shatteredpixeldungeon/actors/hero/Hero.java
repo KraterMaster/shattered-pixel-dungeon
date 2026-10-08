@@ -239,7 +239,10 @@ public class Hero extends Char {
 	public int exp = 0;
 	
 	public int HTBoost = 0;
-	
+
+	//extra (or removed) talent points per tier, indexed by tier (1-4), only set by the debug menu
+	public int[] debugTalentPoints = new int[Talent.MAX_TALENT_TIERS + 1];
+
 	private ArrayList<Mob> visibleEnemies;
 
 	//This list is maintained so that some logic checks can be skipped
@@ -301,7 +304,8 @@ public class Hero extends Char {
 	private static final String LEVEL		= "lvl";
 	private static final String EXPERIENCE	= "exp";
 	private static final String HTBOOST     = "htboost";
-	
+	private static final String DEBUG_TALENT_POINTS = "debug_talent_points";
+
 	@Override
 	public void storeInBundle( Bundle bundle ) {
 
@@ -321,6 +325,7 @@ public class Hero extends Char {
 		bundle.put( EXPERIENCE, exp );
 		
 		bundle.put( HTBOOST, HTBoost );
+		bundle.put( DEBUG_TALENT_POINTS, debugTalentPoints );
 
 		belongings.storeInBundle( bundle );
 	}
@@ -344,6 +349,12 @@ public class Hero extends Char {
 		defenseSkill = bundle.getInt( DEFENSE );
 		
 		STR = bundle.getInt( STRENGTH );
+
+		if (bundle.contains( DEBUG_TALENT_POINTS )){
+			int[] saved = bundle.getIntArray( DEBUG_TALENT_POINTS );
+			debugTalentPoints = new int[Talent.MAX_TALENT_TIERS + 1];
+			System.arraycopy(saved, 0, debugTalentPoints, 0, Math.min(saved.length, debugTalentPoints.length));
+		}
 
 		belongings.restoreFromBundle( bundle );
 	}
@@ -409,9 +420,9 @@ public class Hero extends Char {
 			return 0;
 		} else if (buff(PotionOfDivineInspiration.DivineInspirationTracker.class) != null
 					&& buff(PotionOfDivineInspiration.DivineInspirationTracker.class).isBoosted(tier)) {
-			return 2;
+			return 2 + debugTalentPoints[tier];
 		} else {
-			return 0;
+			return debugTalentPoints[tier];
 		}
 	}
 	
