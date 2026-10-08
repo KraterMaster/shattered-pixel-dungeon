@@ -91,11 +91,12 @@ public class WndDebugItems extends Window {
 		int maxHeight = (int)(PixelScene.uiCamera.height * 0.9f) - (int)top;
 		int height = Math.min( (int)content.height(), maxHeight );
 
+		//the window must be resized before the scroll pane is positioned, as resizing moves the window's camera
+		resize( WIDTH, (int)top + height );
+
 		ScrollPane list = new ScrollPane( content );
 		add( list );
 		list.setRect( 0, top, WIDTH, height );
-
-		resize( WIDTH, (int)top + height );
 	}
 
 	//enchantments and glyphs are not items, so they can't be added to the inventory
@@ -135,6 +136,11 @@ public class WndDebugItems extends Window {
 
 			float top = title.bottom() + 4;
 
+			int height = (int)(PixelScene.uiCamera.height * 0.9f) - (int)top;
+
+			//the window must be resized before the scroll pane is positioned, as resizing moves the window's camera
+			resize( WIDTH_P, (int)top + height );
+
 			final ScrollingListPane list = new ScrollingListPane();
 			add( list );
 
@@ -161,10 +167,7 @@ public class WndDebugItems extends Window {
 				});
 			}
 
-			int height = (int)(PixelScene.uiCamera.height * 0.9f) - (int)top;
 			list.setRect( 0, top, WIDTH_P, height );
-
-			resize( WIDTH_P, (int)top + height );
 		}
 
 		//the item that goes into the inventory is a normal one, so it follows the game's own identification
