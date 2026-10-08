@@ -144,11 +144,12 @@ public class WndDebug extends Window {
 		int maxHeight = (int)(PixelScene.uiCamera.height * 0.9f) - (int)top;
 		int height = Math.min( (int)pos, maxHeight );
 
+		//the window must be resized before the scroll pane is positioned, as resizing moves the window's camera
+		resize( WIDTH, (int)top + height );
+
 		ScrollPane list = new ScrollPane( content );
 		add( list );
 		list.setRect( 0, top, WIDTH, height );
-
-		resize( WIDTH, (int)top + height );
 	}
 
 	//a tier's points can only be used once the tier is unlocked, so editing them before that does nothing
